@@ -6,17 +6,32 @@ from exp.exp_informer import Exp_Informer
 
 parser = argparse.ArgumentParser(description='[Informer] Long Sequences Forecasting')
 
-parser.add_argument('--model', type=str, required=True, default='informer',help='model of experiment, options: [informer, informerstack, informerlight(TBD)]')
+parser.add_argument('--model', type=str, required=False, default='informer',help='model of experiment, options: [informer, informerstack, informerlight(TBD)]')
 
-parser.add_argument('--data', type=str, required=True, default='ETTh1', help='data')
+parser.add_argument('--data', type=str, required=False, default='ETTh1', help='data')
 parser.add_argument('--root_path', type=str, default='./data/ETT/', help='root path of the data file')
 parser.add_argument('--data_path', type=str, default='ETTh1.csv', help='data file')    
 parser.add_argument('--features', type=str, default='M', help='forecasting task, options:[M, S, MS]; M:multivariate predict multivariate, S:univariate predict univariate, MS:multivariate predict univariate')
+'''
+--features用于指定预测任务的类型。它有三个选项：
+M: 多变量预测多变量
+S: 单变量预测单变量
+MS: 多变量预测单变量
+'''
 parser.add_argument('--target', type=str, default='OT', help='target feature in S or MS task')
+'''
+制定数据集中的某一列作为特征，而这个target参数就是用来指定这一列的。
+'''
 parser.add_argument('--freq', type=str, default='h', help='freq for time features encoding, options:[s:secondly, t:minutely, h:hourly, d:daily, b:business days, w:weekly, m:monthly], you can also use more detailed freq like 15min or 3h')
+'''
+告诉模型时间特征的频率，用来编码合适的时间特征 
+'''
 parser.add_argument('--checkpoints', type=str, default='./checkpoints/', help='location of model checkpoints')
 
 parser.add_argument('--seq_len', type=int, default=96, help='input sequence length of Informer encoder')
+'''
+--seq_len 参数是一个命令行参数，用于指定输入序列的长度。这个参数定义了模型在进行预测时使用的历史数据点的数量
+'''
 parser.add_argument('--label_len', type=int, default=48, help='start token length of Informer decoder')
 parser.add_argument('--pred_len', type=int, default=24, help='prediction sequence length')
 # Informer decoder input: concat[start token series(label_len), zero padding series(pred_len)]
@@ -24,18 +39,43 @@ parser.add_argument('--pred_len', type=int, default=24, help='prediction sequenc
 parser.add_argument('--enc_in', type=int, default=7, help='encoder input size')
 parser.add_argument('--dec_in', type=int, default=7, help='decoder input size')
 parser.add_argument('--c_out', type=int, default=7, help='output size')
+'''
+enc_in: 编码器输入的特征数量。这个参数指定了输入到编码器的特征维度。 todo 是类似全连接层那种输入维度的意思吗？
+dec_in: 解码器输入的特征数量。这个参数指定了输入到解码器的特征维度。
+c_out: 输出的特征数量。这个参数指定了模型输出的特征维度。
+'''
 parser.add_argument('--d_model', type=int, default=512, help='dimension of model')
+'''
+编码器内部的模型维度。这个参数指定了编码器和解码器内部的模型维度。
+'''
 parser.add_argument('--n_heads', type=int, default=8, help='num of heads')
 parser.add_argument('--e_layers', type=int, default=2, help='num of encoder layers')
 parser.add_argument('--d_layers', type=int, default=1, help='num of decoder layers')
 parser.add_argument('--s_layers', type=str, default='3,2,1', help='num of stack encoder layers')
+'''
+todo 貌似是进一步堆叠e_layers的数量 
+'''
 parser.add_argument('--d_ff', type=int, default=2048, help='dimension of fcn')
 parser.add_argument('--factor', type=int, default=5, help='probsparse attn factor')
 parser.add_argument('--padding', type=int, default=0, help='padding type')
 parser.add_argument('--distil', action='store_false', help='whether to use distilling in encoder, using this argument means not using distilling', default=True)
+'''
+是否进行压缩采样
+'''
 parser.add_argument('--dropout', type=float, default=0.05, help='dropout')
 parser.add_argument('--attn', type=str, default='prob', help='attention used in encoder, options:[prob, full]')
+'''
+特征层的注意力机制，有两种选择：
+prob: 用于稀疏注意力机制 todo 是什么样的？和原始论文中是如何对应的？
+full: 用于全连接注意力机制
+'''
 parser.add_argument('--embed', type=str, default='timeF', help='time features encoding, options:[timeF, fixed, learned]')
+'''
+这个应该是位置编码的方式，有三种选择：
+timeF: 时间特征编码 todo 多重时间特征的编码方式，比如周、月、年等的特征一起加入到位置编码中
+fixed: 固定编码 todo 类似1,2,3,4,5,6,7,8,9,10这种？
+learned: 学习编码 todo 应该是网络自己学习的位置编码
+'''
 parser.add_argument('--activation', type=str, default='gelu',help='activation')
 parser.add_argument('--output_attention', action='store_true', help='whether to output attention in ecoder')
 parser.add_argument('--do_predict', action='store_true', help='whether to predict unseen future data')
@@ -43,9 +83,16 @@ parser.add_argument('--mix', action='store_false', help='use mix attention in ge
 parser.add_argument('--cols', type=str, nargs='+', help='certain cols from the data files as the input features')
 parser.add_argument('--num_workers', type=int, default=0, help='data loader num workers')
 parser.add_argument('--itr', type=int, default=2, help='experiments times')
+'''
+训练的轮数，也就是epochs有多少个itr
+主要是用于对比实验，每个itr时的部分训练参数会有所不同
+'''
 parser.add_argument('--train_epochs', type=int, default=6, help='train epochs')
 parser.add_argument('--batch_size', type=int, default=32, help='batch size of train input data')
 parser.add_argument('--patience', type=int, default=3, help='early stopping patience')
+'''
+todo
+'''
 parser.add_argument('--learning_rate', type=float, default=0.0001, help='optimizer learning rate')
 parser.add_argument('--des', type=str, default='test',help='exp description')
 parser.add_argument('--loss', type=str, default='mse',help='loss function')
@@ -68,6 +115,11 @@ if args.use_gpu and args.use_multi_gpu:
     args.device_ids = [int(id_) for id_ in device_ids]
     args.gpu = args.device_ids[0]
 
+# data: 训练的数据集文件名称
+# T：目标特征列
+# M：多变量预测多变量（以多少个历史数据预测未来多少个数据）三个值分别代表enc_in, dec_in, c_out
+# S：单变量预测单变量（以1个历史数据预测未来1个数据）
+# MS：多变量预测单变量（以多少个历史数据预测未来1个数据）
 data_parser = {
     'ETTh1':{'data':'ETTh1.csv','T':'OT','M':[7,7,7],'S':[1,1,1],'MS':[7,7,1]},
     'ETTh2':{'data':'ETTh2.csv','T':'OT','M':[7,7,7],'S':[1,1,1],'MS':[7,7,1]},

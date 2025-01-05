@@ -60,6 +60,7 @@ class Exp_Informer(Exp_Basic):
     def _get_data(self, flag):
         args = self.args
 
+        # 构建数据集字典，根据不同的数据集选择不同的数据集类
         data_dict = {
             'ETTh1':Dataset_ETT_hour,
             'ETTh2':Dataset_ETT_hour,
